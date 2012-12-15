@@ -7,7 +7,7 @@ public class Trainer {
 		
 	}
 	
-	public void suggest(String word, int[] combination) {
+	public void suggest(String words, int[] combination) {
 		
 	}
 	
