@@ -1,4 +1,4 @@
-// $ANTLR 3.4 SequenceWalker.g 2012-12-15 02:55:31
+// $ANTLR 3.4 SequenceWalker.g 2012-12-15 03:06:04
 
 	package sequence;
 	import sequence.Sequence;

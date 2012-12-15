@@ -15,7 +15,6 @@ public class Sequence {
 		public String word, terminator;
 		
 		public Unit(String word, String terminator) {
-			System.out.println(word);
 			this.word = word;
 			this.terminator = terminator;
 		}

@@ -1,8 +1,31 @@
 
 public class Agent {
 	
-	public String guess(int[] combination) {
-		return null;
+	private CharacterMap mMap;
+	
+	public Agent(CharacterMap map) {
+		mMap = map;
+	}
+	
+	public String feed(int combination[]) {
+		StringBuffer result = new StringBuffer();
+		
+		for(int input : combination) {
+			String nextWord = mMap.feed(input);
+			if(nextWord != null) {
+				result.append(nextWord);
+			}
+		}
+		
+		return result.toString();
+	}
+	
+	public String query() {
+		return mMap.query();
+	}
+	
+	public void dump() {
+		mMap.dump();
 	}
 
 }

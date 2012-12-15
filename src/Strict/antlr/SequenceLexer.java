@@ -1,4 +1,4 @@
-// $ANTLR 3.4 Sequence.g 2012-12-15 02:44:24
+// $ANTLR 3.4 Sequence.g 2012-12-15 03:06:04
 
 	package sequence;
 
@@ -36,10 +36,10 @@ public class SequenceLexer extends Lexer {
         try {
             int _type = WORD;
             int _channel = DEFAULT_TOKEN_CHANNEL;
-            // Sequence.g:34:2: ( ( 'a' .. 'z' )+ )
-            // Sequence.g:34:4: ( 'a' .. 'z' )+
+            // Sequence.g:35:2: ( ( 'a' .. 'z' )+ )
+            // Sequence.g:35:4: ( 'a' .. 'z' )+
             {
-            // Sequence.g:34:4: ( 'a' .. 'z' )+
+            // Sequence.g:35:4: ( 'a' .. 'z' )+
             int cnt1=0;
             loop1:
             do {
@@ -94,7 +94,7 @@ public class SequenceLexer extends Lexer {
         try {
             int _type = TERMINATOR;
             int _channel = DEFAULT_TOKEN_CHANNEL;
-            // Sequence.g:38:2: ( ', ' | '. ' | '.' | '\\n' | ' ' )
+            // Sequence.g:39:2: ( ', ' | '. ' | '.' | '\\n' | ' ' )
             int alt2=5;
             switch ( input.LA(1) ) {
             case ',':
@@ -134,7 +134,7 @@ public class SequenceLexer extends Lexer {
 
             switch (alt2) {
                 case 1 :
-                    // Sequence.g:38:4: ', '
+                    // Sequence.g:39:4: ', '
                     {
                     match(", "); 
 
@@ -143,7 +143,7 @@ public class SequenceLexer extends Lexer {
                     }
                     break;
                 case 2 :
-                    // Sequence.g:39:4: '. '
+                    // Sequence.g:40:4: '. '
                     {
                     match(". "); 
 
@@ -152,21 +152,21 @@ public class SequenceLexer extends Lexer {
                     }
                     break;
                 case 3 :
-                    // Sequence.g:40:4: '.'
+                    // Sequence.g:41:4: '.'
                     {
                     match('.'); 
 
                     }
                     break;
                 case 4 :
-                    // Sequence.g:41:4: '\\n'
+                    // Sequence.g:42:4: '\\n'
                     {
                     match('\n'); 
 
                     }
                     break;
                 case 5 :
-                    // Sequence.g:42:4: ' '
+                    // Sequence.g:43:4: ' '
                     {
                     match(' '); 
 
