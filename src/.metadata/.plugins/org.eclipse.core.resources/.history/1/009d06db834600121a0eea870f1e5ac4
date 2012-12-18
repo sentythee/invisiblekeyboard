@@ -1,9 +1,0 @@
-
-public class Main {
-	
-	public static void main(String[] args) {
-		Trainer trainer = new Trainer();
-		trainer.suggest("the", new int[] {4, 5, 6});
-	}
-
-}
