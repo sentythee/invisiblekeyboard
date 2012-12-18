@@ -20,12 +20,14 @@ public class Agent {
 	private int mStoredInputs;
 	
 	/** 
-	 * Training data, frequency of taps and preceding taps.
+	 * Training data, frequency of taps and preceding/future taps.
 	 * 
 	 * If input i is given, the nth previous tap was key k on input p this many times:
 	 *     mSampleCounts[HISTORY][i][n][p][k]
 	 * 
 	 * n = 0, p = 1 means that i mapped to k that many times.
+	 * 
+	 * s/previous/later/ for mSampleCounts[FUTURE]
 	 */
 	private int mSampleCounts[][][][][];
 	private int mSampleTotals[][][];
@@ -146,10 +148,6 @@ public class Agent {
 		}
 	}
 	
-	private void getMostLikelyFirstChar(char output[]) {
-		
-	}
-	
 	public char[] test(int input) {
 		mCurrentInput = (mCurrentInput + 1) % mMemorySize;
 		
@@ -160,9 +158,6 @@ public class Agent {
 		
 		updateOutputProbs(input);
 		getMostLikelyPrevChars(result);
-		getMostLikelyFirstChar(result);
-		
-		
 		
 		return result;
 	}
