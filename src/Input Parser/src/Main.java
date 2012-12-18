@@ -10,20 +10,14 @@ public class Main {
 		agent.train(new int[] {6}, "q");
 		agent.addUncertainty(1);
 		
-		char[] res = agent.test(2);
-		agent.test(3);
-		agent.test(2);
-		agent.test(2);
-		agent.test(3);
-		res = agent.test(4);
+		agent.sendInput(new int[] {2, 3, 4, 3, 2, 9, 6});
 		
-		// should be "asdxyz" backwards
-		System.out.println(res[0]);
-		System.out.println(res[1]);
-		System.out.println(res[2]);
-		System.out.println(res[3]);
-		System.out.println(res[4]);
-		System.out.println(res[5]);
+		// writes exactly 20 character to the buffer :/
+		char[] result = new char[20];
+		agent.writeConversions(result);
+		
+		// should be "asdyz q" backwards
+		System.out.println(new String(result));
 		
 		
 	}
