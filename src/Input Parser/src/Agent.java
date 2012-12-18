@@ -29,8 +29,8 @@ public class Agent {
 	 * 
 	 * s/previous/later/ for mSampleCounts[FUTURE]
 	 */
-	private double mSampleCounts[][][][][];
-	private double mSampleTotals[][][];
+	private double mWeightedMatches[][][][][];
+	private double mCategoryMax[][][];
 	
 	/** mOutputProbs[nth prev input][key] = P(nth prev input == key)*/
 	private double mOutputProbs[][];
@@ -43,8 +43,8 @@ public class Agent {
 		mCurrentInput = 0;
 		mSamples = 0;
 		
-		mSampleCounts = new double[2][mPossibleInputs][mMemorySize][mPossibleInputs][mPossibleOutputs];
-		mSampleTotals = new double[mPossibleInputs][mMemorySize][mPossibleInputs];
+		mWeightedMatches = new double[2][mPossibleInputs][mMemorySize][mPossibleInputs][mPossibleOutputs];
+		mCategoryMax = new double[mPossibleInputs][mMemorySize][mPossibleInputs];
 		mOutputProbs = new double[mMemorySize][mPossibleOutputs];
 		
 		// probabilities are just multiplied, need a positive, non-zero value here
@@ -72,9 +72,9 @@ public class Agent {
 					break;
 				}
 				
-				mSampleCounts[HISTORY][currentTap][indexDiff][previousTap][previousChar] = 1;
-				mSampleCounts[FUTURE][currentTap][indexDiff][previousTap][chars[index]] = 1;
-				mSampleTotals[currentTap][indexDiff][previousTap] = 1;
+				mWeightedMatches[HISTORY][currentTap][indexDiff][previousTap][previousChar] = 1;
+				mWeightedMatches[FUTURE][currentTap][indexDiff][previousTap][chars[index]] = 1;
+				mCategoryMax[currentTap][indexDiff][previousTap] = 1;
 			}
 		}
 	}
@@ -87,16 +87,16 @@ public class Agent {
 	 * 
 	 * @param uncertainty 
 	 */
-	public void addUncertainty(int uncertainty) {
+	public void addUncertainty(double uncertainty) {
 		for(int currentTap = 0; currentTap < mPossibleInputs; currentTap++) {
 			for(int indexDiff = 0; indexDiff < mMemorySize; indexDiff++) {
 				for(int previousTap = 0; previousTap < mPossibleInputs; previousTap++) {
 					for(int previousChar = 0; previousChar < mPossibleOutputs; previousChar++) {
-						mSampleCounts[HISTORY][currentTap][indexDiff][previousTap][previousChar] += uncertainty;
-						mSampleCounts[FUTURE][currentTap][indexDiff][previousTap][previousChar] += uncertainty;
+						mWeightedMatches[HISTORY][currentTap][indexDiff][previousTap][previousChar] += uncertainty;
+						mWeightedMatches[FUTURE][currentTap][indexDiff][previousTap][previousChar] += uncertainty;
 					}
 					
-					mSampleTotals[currentTap][indexDiff][previousTap] += uncertainty;
+					mCategoryMax[currentTap][indexDiff][previousTap] += 1;
 				}
 			}
 		}
@@ -105,14 +105,14 @@ public class Agent {
 	/**
 	 * Simple exponential preference
 	 */
-	public void preferNearby() {
+	public void preferNearby(double base) {
 		for(int currentTap = 0; currentTap < mPossibleInputs; currentTap++) {
 			for(int indexDiff = 0; indexDiff < mMemorySize; indexDiff++) {
 				for(int previousTap = 0; previousTap < mPossibleInputs; previousTap++) {
 					for(int previousChar = 0; previousChar < mPossibleOutputs; previousChar++) {
 						double power = -indexDiff;
-						mSampleCounts[HISTORY][currentTap][indexDiff][previousTap][previousChar] *= Math.pow(2, power);
-						mSampleCounts[FUTURE][currentTap][indexDiff][previousTap][previousChar] *= Math.pow(2, power);
+						mWeightedMatches[HISTORY][currentTap][indexDiff][previousTap][previousChar] *= Math.pow(base, power);
+						mWeightedMatches[FUTURE][currentTap][indexDiff][previousTap][previousChar] *= Math.pow(base, power);
 					}
 					
 				}
@@ -121,16 +121,16 @@ public class Agent {
 	}
 	
 	private double calculateHistoryProbability(int latestTap, int nthPrevTap, int previousTap, char expectedChar) {
-		double total = mSampleTotals[latestTap][nthPrevTap][previousTap];
-		double matching = mSampleCounts[HISTORY][latestTap][nthPrevTap][previousTap][expectedChar];
+		double max = mCategoryMax[latestTap][nthPrevTap][previousTap];
+		double match = mWeightedMatches[HISTORY][latestTap][nthPrevTap][previousTap][expectedChar];
 		
-		return matching / total;
+		return match / max;
 
 	}
 	
 	private double calculateFutureProbability(int latestTap, int nthFutureTap, int previousTap, char expectedChar) {
-		double total = mSampleTotals[latestTap][nthFutureTap][previousTap];
-		double matching = mSampleCounts[FUTURE][latestTap][nthFutureTap][previousTap][expectedChar];
+		double total = mCategoryMax[latestTap][nthFutureTap][previousTap];
+		double matching = mWeightedMatches[FUTURE][latestTap][nthFutureTap][previousTap][expectedChar];
 		
 		return matching / total;
 
