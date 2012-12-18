@@ -12,8 +12,9 @@ public class Main {
 		char[] res = agent.test(2);
 		res = agent.test(3);
 		res = agent.test(2);
+		res = agent.test(2);
 		res = agent.test(3);
-		res = agent.test(9);
+		res = agent.test(4);
 		System.out.println(res[0]);
 		System.out.println(res[1]);
 		System.out.println(res[2]);

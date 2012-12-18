@@ -2,6 +2,9 @@ import java.util.Arrays;
 
 
 public class Agent {
+	private final static int HISTORY = 0;
+	private final static int FUTURE = 1;
+	
 	/** calculate output for this many previous characters */
 	private final int mMemorySize;
 	
@@ -20,11 +23,11 @@ public class Agent {
 	 * Training data, frequency of taps and preceding taps.
 	 * 
 	 * If input i is given, the nth previous tap was key k on input p this many times:
-	 *     mSampleCounts[i][n][p][k]
+	 *     mSampleCounts[HISTORY][i][n][p][k]
 	 * 
 	 * n = 0, p = 1 means that i mapped to k that many times.
 	 */
-	private int mSampleCounts[][][][];
+	private int mSampleCounts[][][][][];
 	private int mSampleTotals[][][];
 	
 	/** mOutputProbs[nth prev input][key] = P(nth prev input == key)*/
@@ -37,7 +40,7 @@ public class Agent {
 		mMemory = new int[memorySize];
 		mCurrentInput = 0;
 		
-		mSampleCounts = new int[mPossibleInputs][mMemorySize][mPossibleInputs][mPossibleOutputs];
+		mSampleCounts = new int[2][mPossibleInputs][mMemorySize][mPossibleInputs][mPossibleOutputs];
 		mSampleTotals = new int[mPossibleInputs][mMemorySize][mPossibleInputs];
 		mOutputProbs = new double[mMemorySize][mPossibleOutputs];
 		
@@ -56,11 +59,11 @@ public class Agent {
 			for(int previous = 0; previous <= index; previous++) {
 				int previousTap = input[previous];
 				char previousChar = chars[previous];
+				int nthPrevIndex = index - previous;
 				
-				int memoryIndex = (index - previous) % mMemorySize;
-				
-				mSampleCounts[currentTap][memoryIndex][previousTap][previousChar] += 1;
-				mSampleTotals[currentTap][memoryIndex][previousTap] += 1;
+				mSampleCounts[HISTORY][currentTap][nthPrevIndex][previousTap][previousChar] += 1;
+				mSampleCounts[FUTURE][currentTap][nthPrevIndex][previousTap][chars[index]] += 1;
+				mSampleTotals[currentTap][nthPrevIndex][previousTap] += 1;
 			}
 		}
 	}
@@ -74,33 +77,37 @@ public class Agent {
 	 * @param uncertainty 
 	 */
 	public void addUncertainty(int uncertainty) {
-		for(int currentTap = 0; currentTap < mSampleCounts.length; currentTap++) {
-			for(int nthPrevIndex = 0; nthPrevIndex < mSampleCounts[0].length; nthPrevIndex++) {
-				for(int previousTap = 0; previousTap < mSampleCounts[0][0].length; previousTap++) {
-					for(int previousChar = 0; previousChar < mSampleCounts[0][0][0].length; previousChar++) {
-						mSampleCounts[currentTap][nthPrevIndex][previousTap][previousChar] += 1;
+		for(int currentTap = 0; currentTap < mSampleCounts[0].length; currentTap++) {
+			for(int nthPrevIndex = 0; nthPrevIndex < mSampleCounts[0][0].length; nthPrevIndex++) {
+				for(int previousTap = 0; previousTap < mSampleCounts[0][0][0].length; previousTap++) {
+					for(int previousChar = 0; previousChar < mSampleCounts[0][0][0][0].length; previousChar++) {
+						mSampleCounts[HISTORY][currentTap][nthPrevIndex][previousTap][previousChar] += 1;
+						mSampleCounts[FUTURE][currentTap][nthPrevIndex][previousTap][previousChar] += 1;
 					}
 					
-					mSampleTotals[currentTap][nthPrevIndex][previousTap] += mSampleCounts[0][0][0].length;
+					mSampleTotals[currentTap][nthPrevIndex][previousTap] += mSampleCounts[0][0][0][0].length;
 				}
 			}
 		}
 	}
 	
-	private double calculateProbability(int latestTap, int nthPrevTap, int previousTap, char expectedChar) {
+	private double calculateHistoryProbability(int latestTap, int nthPrevTap, int previousTap, char expectedChar) {
 		int total = mSampleTotals[latestTap][nthPrevTap][previousTap];
-		int matching = mSampleCounts[latestTap][nthPrevTap][previousTap][expectedChar];
+		int matching = mSampleCounts[HISTORY][latestTap][nthPrevTap][previousTap][expectedChar];
 		
 		return (double) matching / total;
 
 	}
 	
-	public char[] test(int input) {
-		mMemory[mCurrentInput] = input;
-		mStoredInputs = Math.min(mStoredInputs + 1, mMemorySize);
+	private double calculateFutureProbability(int latestTap, int nthPrevTap, int previousTap, char expectedChar) {
+		int total = mSampleTotals[latestTap][nthPrevTap][previousTap];
+		int matching = mSampleCounts[FUTURE][latestTap][nthPrevTap][previousTap][expectedChar];
 		
-		char result[] = new char[mMemorySize];
-		
+		return (double) matching / total;
+
+	}
+	
+	private void updateOutputProbs(int input) {
 		// reset probabilities of current output array
 		Arrays.fill(mOutputProbs[mCurrentInput], 1.0);
 		
@@ -110,12 +117,23 @@ public class Agent {
 		for(int prevIndex = 0; prevIndex < mostPrevIndex; prevIndex++) {
 			int inputIndex = (mMemorySize + mCurrentInput - prevIndex) % mMemorySize;
 			
+			for(char possibleChar = 0; possibleChar < mPossibleOutputs; possibleChar++) {
+				mOutputProbs[inputIndex][possibleChar] *= calculateHistoryProbability(input, prevIndex, mMemory[inputIndex], possibleChar);
+				mOutputProbs[mCurrentInput][possibleChar] *= calculateFutureProbability(input, prevIndex, mMemory[inputIndex], possibleChar);
+			}
+			
+		}
+	}
+	
+	private void getMostLikelyPrevChars(char output[]) {
+		// update probabilities on up to mostPrevIndex previous inputs
+		for(int prevIndex = 0; prevIndex < mMemorySize; prevIndex++) {
+			int inputIndex = (mMemorySize + mCurrentInput - prevIndex) % mMemorySize;
+			
 			double mostLikelyProb = 0;
 			char mostLikelyChar = 0;
 			
 			for(char possibleChar = 0; possibleChar < mPossibleOutputs; possibleChar++) {
-				mOutputProbs[inputIndex][possibleChar] *= calculateProbability(input, prevIndex, mMemory[inputIndex], possibleChar);
-				
 				double currentProb = mOutputProbs[inputIndex][possibleChar];
 				if(currentProb > mostLikelyProb) {
 					mostLikelyProb = currentProb;
@@ -124,11 +142,27 @@ public class Agent {
 				
 			}
 			
-			result[prevIndex] = mostLikelyChar;
-			
+			output[prevIndex] = mostLikelyChar;
 		}
+	}
+	
+	private void getMostLikelyFirstChar(char output[]) {
 		
+	}
+	
+	public char[] test(int input) {
 		mCurrentInput = (mCurrentInput + 1) % mMemorySize;
+		
+		mMemory[mCurrentInput] = input;
+		mStoredInputs = Math.min(mStoredInputs + 1, mMemorySize);
+		
+		char result[] = new char[mMemorySize];
+		
+		updateOutputProbs(input);
+		getMostLikelyPrevChars(result);
+		getMostLikelyFirstChar(result);
+		
+		
 		
 		return result;
 	}
