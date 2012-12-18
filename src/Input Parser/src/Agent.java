@@ -17,18 +17,20 @@ public class Agent {
 	/** points to the last-entered tap in mMemory[] */
 	private int mCurrentInput;
 	
+	private int mSamples;
+	
 	/** 
 	 * Training data, frequency of taps and preceding/future taps.
 	 * 
 	 * If input i is given, the nth previous tap was key k on input p this many times:
 	 *     mSampleCounts[HISTORY][i][n][p][k]
 	 * 
-	 * n = 0, p = 1 means that i mapped to k that many times.
+	 * n = 0, p = i means that i mapped to k that many times.
 	 * 
 	 * s/previous/later/ for mSampleCounts[FUTURE]
 	 */
-	private int mSampleCounts[][][][][];
-	private int mSampleTotals[][][];
+	private double mSampleCounts[][][][][];
+	private double mSampleTotals[][][];
 	
 	/** mOutputProbs[nth prev input][key] = P(nth prev input == key)*/
 	private double mOutputProbs[][];
@@ -39,9 +41,10 @@ public class Agent {
 		
 		mMemory = new int[memorySize];
 		mCurrentInput = 0;
+		mSamples = 0;
 		
-		mSampleCounts = new int[2][mPossibleInputs][mMemorySize][mPossibleInputs][mPossibleOutputs];
-		mSampleTotals = new int[mPossibleInputs][mMemorySize][mPossibleInputs];
+		mSampleCounts = new double[2][mPossibleInputs][mMemorySize][mPossibleInputs][mPossibleOutputs];
+		mSampleTotals = new double[mPossibleInputs][mMemorySize][mPossibleInputs];
 		mOutputProbs = new double[mMemorySize][mPossibleOutputs];
 		
 		// probabilities are just multiplied, need a positive, non-zero value here
@@ -53,6 +56,10 @@ public class Agent {
 	public void train(int input[], String sequence) {
 		char chars[] = sequence.toCharArray();
 		
+		if(chars.length != input.length) {
+			System.err.println("input sizes don't match: " + sequence);
+		}
+		
 		for(int index = 0; index < input.length; index++) {
 			int currentTap = input[index];
 			
@@ -61,9 +68,13 @@ public class Agent {
 				char previousChar = chars[previous];
 				int indexDiff = index - previous;
 				
-				mSampleCounts[HISTORY][currentTap][indexDiff][previousTap][previousChar] += 1;
-				mSampleCounts[FUTURE][currentTap][indexDiff][previousTap][chars[index]] += 1;
-				mSampleTotals[currentTap][indexDiff][previousTap] += 1;
+				if(indexDiff >= mMemorySize) {
+					break;
+				}
+				
+				mSampleCounts[HISTORY][currentTap][indexDiff][previousTap][previousChar] = 1;
+				mSampleCounts[FUTURE][currentTap][indexDiff][previousTap][chars[index]] = 1;
+				mSampleTotals[currentTap][indexDiff][previousTap] = 1;
 			}
 		}
 	}
@@ -77,33 +88,51 @@ public class Agent {
 	 * @param uncertainty 
 	 */
 	public void addUncertainty(int uncertainty) {
-		for(int currentTap = 0; currentTap < mSampleCounts[0].length; currentTap++) {
-			for(int indexDiff = 0; indexDiff < mSampleCounts[0][0].length; indexDiff++) {
-				for(int previousTap = 0; previousTap < mSampleCounts[0][0][0].length; previousTap++) {
-					for(int previousChar = 0; previousChar < mSampleCounts[0][0][0][0].length; previousChar++) {
+		for(int currentTap = 0; currentTap < mPossibleInputs; currentTap++) {
+			for(int indexDiff = 0; indexDiff < mMemorySize; indexDiff++) {
+				for(int previousTap = 0; previousTap < mPossibleInputs; previousTap++) {
+					for(int previousChar = 0; previousChar < mPossibleOutputs; previousChar++) {
 						mSampleCounts[HISTORY][currentTap][indexDiff][previousTap][previousChar] += uncertainty;
 						mSampleCounts[FUTURE][currentTap][indexDiff][previousTap][previousChar] += uncertainty;
 					}
 					
-					mSampleTotals[currentTap][indexDiff][previousTap] += uncertainty * mSampleCounts[0][0][0][0].length;
+					mSampleTotals[currentTap][indexDiff][previousTap] += uncertainty;
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Simple exponential preference
+	 */
+	public void preferNearby() {
+		for(int currentTap = 0; currentTap < mPossibleInputs; currentTap++) {
+			for(int indexDiff = 0; indexDiff < mMemorySize; indexDiff++) {
+				for(int previousTap = 0; previousTap < mPossibleInputs; previousTap++) {
+					for(int previousChar = 0; previousChar < mPossibleOutputs; previousChar++) {
+						double power = -indexDiff;
+						mSampleCounts[HISTORY][currentTap][indexDiff][previousTap][previousChar] *= Math.pow(2, power);
+						mSampleCounts[FUTURE][currentTap][indexDiff][previousTap][previousChar] *= Math.pow(2, power);
+					}
+					
 				}
 			}
 		}
 	}
 	
 	private double calculateHistoryProbability(int latestTap, int nthPrevTap, int previousTap, char expectedChar) {
-		int total = mSampleTotals[latestTap][nthPrevTap][previousTap];
-		int matching = mSampleCounts[HISTORY][latestTap][nthPrevTap][previousTap][expectedChar];
+		double total = mSampleTotals[latestTap][nthPrevTap][previousTap];
+		double matching = mSampleCounts[HISTORY][latestTap][nthPrevTap][previousTap][expectedChar];
 		
-		return (double) matching / total;
+		return matching / total;
 
 	}
 	
 	private double calculateFutureProbability(int latestTap, int nthFutureTap, int previousTap, char expectedChar) {
-		int total = mSampleTotals[latestTap][nthFutureTap][previousTap];
-		int matching = mSampleCounts[FUTURE][latestTap][nthFutureTap][previousTap][expectedChar];
+		double total = mSampleTotals[latestTap][nthFutureTap][previousTap];
+		double matching = mSampleCounts[FUTURE][latestTap][nthFutureTap][previousTap][expectedChar];
 		
-		return (double) matching / total;
+		return matching / total;
 
 	}
 	
@@ -112,7 +141,7 @@ public class Agent {
 		Arrays.fill(mOutputProbs[mCurrentInput], 1.0);
 		
 		// update probabilities on up to mostPrevIndex previous inputs
-		for(int prevIndex = 0; prevIndex < mMemorySize; prevIndex++) {
+		for(int prevIndex = 0; prevIndex < mSamples; prevIndex++) {
 			int inputIndex = (mMemorySize + mCurrentInput - prevIndex) % mMemorySize;
 			
 			for(char possibleChar = 0; possibleChar < mPossibleOutputs; possibleChar++) {
@@ -121,6 +150,10 @@ public class Agent {
 			}
 			
 		}
+	}
+	
+	public void reset() {
+		mSamples = 0;
 	}
 	
 	public void writeConversions(char output[]) {
@@ -146,6 +179,7 @@ public class Agent {
 	public void sendInput(int input) {
 		mCurrentInput = (mCurrentInput + 1) % mMemorySize;
 		mMemory[mCurrentInput] = input;
+		mSamples = Math.min(mSamples + 1, mMemorySize);
 		
 		updateOutputProbs(input);
 		
